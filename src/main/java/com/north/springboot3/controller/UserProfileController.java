@@ -3,6 +3,7 @@ package com.north.springboot3.controller;
 import com.north.springboot3.model.UserProfile;
 import com.north.springboot3.service.UserProfileService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class UserProfileController {
 
     @PostMapping
     public ResponseEntity<UserProfile> createUserProfile(@RequestBody UserProfile userProfile) {
+        SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(userProfileService.createUserProfile(userProfile));
     }
 

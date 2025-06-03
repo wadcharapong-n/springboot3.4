@@ -10,6 +10,8 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -64,6 +66,9 @@ class UserProfileControllerTest {
         profileToUpdate.setEmail("test@email.com");
         profileToUpdate.setFullName("Test User");
 
+        UserProfile existingProfile = new UserProfile();
+        existingProfile.setId(profileId);
+
         UserProfile updatedProfile = new UserProfile();
         updatedProfile.setId(profileId);
         updatedProfile.setUsername(profileToUpdate.getUsername());
@@ -71,7 +76,7 @@ class UserProfileControllerTest {
         updatedProfile.setFullName(profileToUpdate.getFullName());
 
         // Mock repository behavior
-        when(userProfileRepository.existsById(profileId)).thenReturn(true);
+        when(userProfileRepository.findById(profileId)).thenReturn(Optional.of(existingProfile));
         when(userProfileRepository.save(any(UserProfile.class))).thenReturn(updatedProfile);
 
         // Execute test
@@ -80,18 +85,19 @@ class UserProfileControllerTest {
         // Verify
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(updatedProfile, response.getBody());
-        verify(userProfileRepository).existsById(profileId);
+        verify(userProfileRepository).findById(profileId);
         verify(userProfileRepository).save(any(UserProfile.class));
     }
 
     @Test
     void deleteUserProfile() {
-        when(userProfileRepository.existsById(1L)).thenReturn(true);
+        UserProfile existingProfile = new UserProfile();
+        when(userProfileRepository.findById(1L)).thenReturn(Optional.of(existingProfile));
 
         ResponseEntity<Void> response = userProfileController.deleteUserProfile(1L);
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-        verify(userProfileRepository).existsById(1L);
+        verify(userProfileRepository).findById(1L);
         verify(userProfileRepository).deleteById(1L);
     }
     @Test
@@ -103,5 +109,30 @@ class UserProfileControllerTest {
 
         assertEquals(expectedProfiles, response.getBody());
         verify(userProfileRepository).findAll();
+    }
+
+    @Test
+    void updateUserProfile_NotFound() {
+        Long profileId = 1L;
+        UserProfile profileToUpdate = new UserProfile();
+        when(userProfileRepository.findById(profileId)).thenReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(EntityNotFoundException.class, () ->
+                userProfileController.updateUserProfile(profileId, profileToUpdate));
+
+        verify(userProfileRepository).findById(profileId);
+        verify(userProfileRepository, never()).save(any(UserProfile.class));
+    }
+
+    @Test
+    void deleteUserProfile_NotFound() {
+        Long profileId = 1L;
+        when(userProfileRepository.findById(profileId)).thenReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(EntityNotFoundException.class, () ->
+                userProfileController.deleteUserProfile(profileId));
+
+        verify(userProfileRepository).findById(profileId);
+        verify(userProfileRepository, never()).deleteById(any());
     }
 }
